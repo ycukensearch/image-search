@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Поиск картинок | Йцукен</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  :root{
+    /* --- ОРАНЖЕВАЯ ПАЛИТРА --- */
+    --primary:#f57c00;          /* Orange 700 */
+    --primary-dark:#e65100;     /* Orange 900 */
+    --primary-light:#fff3e0;    /* Orange 50 — для фонов-подсветок */
+    --accent:#ff6d00;           /* Orange A700 */
+    --bg:#fff8f0;
+    --surface:#ffffff;
+    --text:#202124;
+    --text-secondary:#5f6368;
+    --divider:#dadce0;
+    --elevation-1:0 1px 2px rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+    --elevation-2:0 1px 2px rgba(60,64,67,.3), 0 2px 6px 2px rgba(60,64,67,.15);
+    --elevation-3:0 4px 8px 3px rgba(60,64,67,.15), 0 1px 3px rgba(60,64,67,.3);
+    --radius:12px;
+    --radius-pill:24px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Roboto', Helvetica, Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .app-bar{
+    position:sticky;top:0;z-index:50;
+    background:var(--surface);
+    border-bottom:1px solid var(--divider);
+    box-shadow:var(--elevation-1);
+  }
+  .app-bar__inner{
+    max-width:1200px;margin:0 auto;
+    padding:16px 24px;
+    display:flex;flex-direction:column;gap:12px;
+  }
+  /* Заголовок логотипа — оранжевый */
+  .app-bar__logo{
+    display:flex;align-items:center;gap:12px;
+    font-family:'Google Sans','Roboto',sans-serif;
+    font-size:20px;font-weight:500;
+    color:var(--primary);
+  }
+  .app-bar__logo .material-icons{font-size:28px;color:var(--primary);}
+
+  .search{display:flex;gap:10px;align-items:stretch;}
+  .search__field{
+    flex:1;display:flex;align-items:center;
+    background:#f1f3f4;
+    border-radius:var(--radius-pill);
+    transition:background .2s, box-shadow .2s;
+    height:48px;padding:0 8px 0 16px;
+    border:1px solid transparent;
+  }
+  .search__field:focus-within{
+    background:#fff;
+    border-color:var(--primary);
+    box-shadow:0 0 0 1px var(--primary);
+  }
+  /* Иконка лупы — оранжевая */
+  .search__field .material-icons{color:var(--primary);font-size:22px;}
+  .search input{
+    flex:1;border:0;outline:0;background:transparent;
+    font:400 16px/48px 'Roboto',sans-serif;
+    color:var(--text);padding:0 8px;height:48px;min-width:0;
+  }
+  .search input::placeholder{color:var(--text-secondary);}
+
+  /* Кнопка «Искать» — оранжевая */
+  .btn-primary{
+    border:0;background:var(--primary);color:#fff;
+    font:500 14px/1 'Google Sans','Roboto',sans-serif;
+    letter-spacing:.5px;text-transform:uppercase;
+    height:48px;padding:0 24px;
+    border-radius:var(--radius-pill);
+    cursor:pointer;position:relative;overflow:hidden;
+    box-shadow:var(--elevation-1);
+    transition:background .2s, box-shadow .2s;
+    display:inline-flex;align-items:center;gap:8px;
+    white-space:nowrap;
+  }
+  .btn-primary:hover{background:var(--primary-dark);box-shadow:var(--elevation-2);}
+  .btn-primary:active{box-shadow:var(--elevation-1);}
+  .btn-primary .material-icons{font-size:18px;color:#fff;}
+
+  .icon-btn{
+    border:0;background:transparent;
+    width:40px;height:40px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;color:var(--primary);
+    position:relative;overflow:hidden;
+    transition:background .2s;flex:none;
+  }
+  .icon-btn:hover{background:var(--primary-light);}
+  .icon-btn .material-icons{font-size:20px;}
+
+  .container{max-width:1200px;margin:0 auto;padding:32px 24px 80px;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(240px,1fr));
+    gap:20px;
+  }
+  .card{
+    background:var(--surface);
+    border-radius:var(--radius);
+    box-shadow:var(--elevation-1);
+    overflow:hidden;display:flex;flex-direction:column;
+    transition:box-shadow .25s, transform .25s;
+    animation:fadeUp .3s ease both;
+  }
+  .card:hover{box-shadow:var(--elevation-3);transform:translateY(-2px);}
+  .card__media{
+    position:relative;width:100%;padding-top:70%;
+    background:#f1f3f4 center/cover no-repeat;overflow:hidden;
+  }
+  .card__media img{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;display:block;opacity:0;transition:opacity .35s;
+  }
+  .card__media img.loaded{opacity:1;}
+
+  .skeleton{
+    position:absolute;inset:0;
+    background:linear-gradient(90deg,#f1f3f4 25%,#e8eaed 37%,#f1f3f4 63%);
+    background-size:400% 100%;
+    animation:shimmer 1.4s ease infinite;
+  }
+  .card__media img.loaded + .skeleton{display:none;}
+
+  .card__body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;flex:1;}
+  /* Заголовок карточки — оранжевый */
+  .card__title{
+    font-family:'Google Sans','Roboto',sans-serif;
+    font-size:15px;font-weight:500;line-height:1.4;margin:0;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;color:var(--primary);
+  }
+  .card__sub{
+    font-size:13px;color:var(--text-secondary);margin:0;
+    display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .card__actions{display:flex;justify-content:flex-end;padding:0 8px 8px;gap:4px;}
+
+  .state{text-align:center;padding:80px 16px;color:var(--text-secondary);}
+  /* Иконка состояния — оранжевая */
+  .state .material-icons{
+    font-size:56px;color:var(--primary);
+    display:block;margin:0 auto 16px;
+    opacity:.55;
+  }
+  /* Заголовок состояния — оранжевый */
+  .state h2{
+    font-family:'Google Sans','Roboto',sans-serif;
+    font-weight:500;font-size:18px;margin:0 0 8px;
+    color:var(--primary);
+  }
+  .state p{margin:0;font-size:14px;line-height:1.6;}
+  .state .examples{
+    display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:20px;
+  }
+  /* Кнопки-примеры — оранжевые */
+  .state .example{
+    border:1px solid var(--primary);
+    background:var(--surface);
+    color:var(--primary);
+    font:500 13px/32px 'Roboto',sans-serif;
+    height:32px;padding:0 14px;border-radius:16px;
+    cursor:pointer;transition:background .2s, color .2s;
+  }
+  .state .example:hover{
+    background:var(--primary);
+    color:#fff;
+  }
+
+  /* Спиннер — оранжевый */
+  .spinner{
+    width:44px;height:44px;margin:0 auto 20px;
+    border:4px solid var(--primary-light);
+    border-top-color:var(--primary);
+    border-radius:50%;animation:spin .8s linear infinite;
+  }
+
+  .snackbar{
+    position:fixed;left:50%;bottom:24px;
+    transform:translate(-50%,120%);
+    background:#323232;color:#fff;
+    font-family:'Roboto',sans-serif;font-size:14px;
+    padding:14px 24px;border-radius:8px;
+    box-shadow:var(--elevation-3);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    z-index:100;max-width:90vw;
+  }
+  .snackbar.show{transform:translate(-50%,0);}
+
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes shimmer{0%{background-position:100% 0;}100%{background-position:-100% 0;}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes ripple{to{transform:scale(4);opacity:0;}}
+
+  /* Ripple — оранжевый */
+  .ripple{
+    position:absolute;border-radius:50%;
+    background:rgba(245,124,0,.25);
+    transform:scale(0);
+    animation:ripple .6s linear;
+    pointer-events:none;
+  }
+  .btn-primary .ripple{background:rgba(255,255,255,.35);}
+
+  @media (max-width:600px){
+    .app-bar__inner{padding:12px;}
+    .search{flex-direction:column;gap:8px;}
+    .btn-primary{justify-content:center;}
+    .container{padding:20px 12px 60px;}
+    .grid{grid-template-columns:repeat(auto-fill, minmax(160px,1fr));gap:14px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="app-bar">
+  <div class="app-bar__inner">
+    <div class="app-bar__logo">
+      <span class="material-icons">photo_library</span>
+      <span>Йцукен Поиск Картинкок</span>
+    </div>
+
+    <div class="search">
+      <div class="search__field">
+        <span class="material-icons">search</span>
+        <input type="text" id="query"
+               placeholder="Например: cat, nature, city…"
+               autocomplete="off">
+        <button type="button" class="icon-btn" id="clearBtn" title="Очистить" hidden>
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <button type="button" class="btn-primary" id="searchBtn">
+        <span class="material-icons">search</span>
+        Искать
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section id="results" aria-live="polite"></section>
+</main>
+
+<div class="snackbar" id="snackbar" role="status"></div>
+
+<script>
+const input     = document.getElementById('query');
+const clearBtn  = document.getElementById('clearBtn');
+const searchBtn = document.getElementById('searchBtn');
+const results   = document.getElementById('results');
+const snackbar  = document.getElementById('snackbar');
+
+let controller = null;
+
+function showSnackbar(text, ms = 3000){
+  snackbar.textContent = text;
+  snackbar.classList.add('show');
+  clearTimeout(showSnackbar._t);
+  showSnackbar._t = setTimeout(()=>snackbar.classList.remove('show'), ms);
+}
+
+function renderLoading(){
+  results.innerHTML = `
+    <div class="state">
+      <div class="spinner"></div>
+      <h2>Ищем изображения…</h2>
+      <p>Пожалуйста, подождите</p>
+    </div>`;
+}
+
+function renderEmpty(query){
+  results.innerHTML = `
+    <div class="state">
+      <span class="material-icons">image_not_supported</span>
+      <h2>Ничего не найдено</h2>
+      <p>По запросу «${escapeHtml(query)}» результатов нет.<br>
+         Попробуйте другие слова:</p>
+      <div class="examples">
+        <button class="example" data-q="cat">cat</button>
+        <button class="example" data-q="dog">dog</button>
+        <button class="example" data-q="nature">nature</button>
+        <button class="example" data-q="city">city</button>
+        <button class="example" data-q="space">space</button>
+        <button class="example" data-q="flower">flower</button>
+      </div>
+    </div>`;
+  bindExamples();
+}
+
+function renderError(msg){
+  results.innerHTML = `
+    <div class="state">
+      <span class="material-icons">cloud_off</span>
+      <h2>Ошибка</h2>
+      <p>${escapeHtml(msg)}</p>
+    </div>`;
+}
+
+function renderWelcome(){
+  results.innerHTML = `
+    <div class="state">
+      <span class="material-icons">search</span>
+      <h2>Найдите нужные картинки</h2>
+      <p>Введите запрос и нажмите <b>«Искать»</b>.</p>
+      <div class="examples">
+        <button class="example" data-q="cat">cat</button>
+        <button class="example" data-q="dog">dog</button>
+        <button class="example" data-q="nature">nature</button>
+        <button class="example" data-q="mountain">mountain</button>
+        <button class="example" data-q="city">city</button>
+        <button class="example" data-q="sunset">sunset</button>
+        <button class="example" data-q="ocean">ocean</button>
+        <button class="example" data-q="forest">forest</button>
+        <button class="example" data-q="space">space</button>
+        <button class="example" data-q="flower">flower</button>
+        <button class="example" data-q="car">car</button>
+        <button class="example" data-q="coffee">coffee</button>
+      </div>
+    </div>`;
+  bindExamples();
+}
+
+function bindExamples(){
+  results.querySelectorAll('.example').forEach(el=>{
+    el.addEventListener('click', ()=> search(el.dataset.q));
+  });
+}
+
+function renderGrid(items){
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+
+  items.forEach((item, i)=>{
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.style.animationDelay = Math.min(i * 25, 400) + 'ms';
+
+    card.innerHTML = `
+      <div class="card__media">
+        <div class="skeleton"></div>
+        <img loading="lazy" alt="${escapeHtml(item.title)}" src="${item.thumb}">
+      </div>
+      <div class="card__body">
+        <h3 class="card__title">${escapeHtml(item.title)}</h3>
+        <p class="card__sub">${escapeHtml(item.author || 'Wikimedia Commons')}</p>
+      </div>
+      <div class="card__actions">
+        <button class="icon-btn" title="Открыть оригинал" data-open="${item.url}">
+          <span class="material-icons">open_in_new</span>
+        </button>
+        <button class="icon-btn" title="Копировать ссылку" data-copy="${item.url}">
+          <span class="material-icons">link</span>
+        </button>
+      </div>`;
+
+    const img = card.querySelector('img');
+    img.addEventListener('load',  ()=>img.classList.add('loaded'));
+    img.addEventListener('error', ()=>{
+      img.remove();
+      const media = card.querySelector('.card__media');
+      media.innerHTML = `<span class="material-icons"
+        style="position:absolute;inset:0;display:flex;align-items:center;
+               justify-content:center;font-size:40px;color:var(--primary);opacity:.5;">broken_image</span>`;
+    });
+
+    grid.appendChild(card);
+  });
+
+  results.replaceChildren(grid);
+
+  grid.addEventListener('click', e=>{
+    const openBtn = e.target.closest('[data-open]');
+    const copyBtn = e.target.closest('[data-copy]');
+    if (openBtn) window.open(openBtn.dataset.open, '_blank', 'noopener');
+    if (copyBtn){
+      navigator.clipboard?.writeText(copyBtn.dataset.copy)
+        .then(()=>showSnackbar('Ссылка скопирована'))
+        .catch(()=>showSnackbar('Не удалось скопировать'));
+    }
+  });
+}
+
+async function search(query){
+  query = (query || '').trim();
+  if (!query){ showSnackbar('Введите запрос'); return; }
+
+  input.value = query;
+  clearBtn.hidden = false;
+
+  if (controller) controller.abort();
+  controller = new AbortController();
+
+  renderLoading();
+
+  const api = 'https://commons.wikimedia.org/w/api.php?' + new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    generator: 'search',
+    gsrsearch: query,
+    gsrnamespace: '6',
+    gsrlimit: '24',
+    prop: 'imageinfo',
+    iiprop: 'url|extmetadata',
+    iiurlwidth: '480'
+  });
+
+  try{
+    const res = await fetch(api, { signal: controller.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    const pages = data?.query?.pages;
+    if (!pages){ renderEmpty(query); return; }
+
+    const items = Object.values(pages)
+      .map(p=>{
+        const info = p.imageinfo?.[0];
+        if (!info) return null;
+        const meta = info.extmetadata || {};
+        return {
+          title : stripHtml(meta.ObjectName?.value) || p.title.replace(/^File:/,''),
+          author: stripHtml(meta.Artist?.value) || '',
+          thumb : info.thumburl || info.url,
+          url   : info.url
+        };
+      })
+      .filter(Boolean);
+
+    if (!items.length) renderEmpty(query);
+    else renderGrid(items);
+  }
+  catch(err){
+    if (err.name === 'AbortError') return;
+    console.error(err);
+    renderError('Ошибка запроса: ' + err.message);
+  }
+}
+
+function escapeHtml(str = ''){
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function stripHtml(html = ''){
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || '').trim();
+}
+
+searchBtn.addEventListener('click', ()=> search(input.value));
+
+input.addEventListener('keydown', e=>{
+  if (e.key === 'Enter'){ e.preventDefault(); search(input.value); }
+});
+
+input.addEventListener('input', ()=>{
+  clearBtn.hidden = !input.value;
+});
+
+clearBtn.addEventListener('click', ()=>{
+  input.value = '';
+  clearBtn.hidden = true;
+  input.focus();
+  renderWelcome();
+});
+
+renderWelcome();
+</script>
+</body>
+  </html>
